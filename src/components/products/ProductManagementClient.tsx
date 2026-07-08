@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -16,12 +16,12 @@ export function ProductManagementClient({ title = "Produtos", stockMode = false 
   const [form, setForm] = useState<any>({ name: "", barcode: "", categoryId: "", salePrice: 0, costPrice: "", stockQuantity: 0, unitType: "UNIT", isActive: true });
   const [audits, setAudits] = useState<any[]>([]);
 
-  async function load() {
+  const load = useCallback(async () => {
     const [p, c] = await Promise.all([fetch(`/api/products?q=${encodeURIComponent(q)}&take=200`).then(r => r.json()), fetch('/api/categories').then(r => r.json())]);
     if (p.ok) setProducts(p.data);
     if (c.ok) setCategories(c.data);
-  }
-  useEffect(() => { load(); }, []);
+  }, [q]);
+  useEffect(() => { load(); }, [load]);
 
   function startEdit(product?: Product) {
     setEditing(product ?? null);

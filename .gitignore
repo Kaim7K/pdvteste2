@@ -7,4 +7,5 @@ out
 coverage
 .DS_Store
 *.log
+tsconfig.tsbuildinfo
 prisma/dev.db

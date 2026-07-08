@@ -65,14 +65,14 @@ export function SalesClient() {
     await loadProducts(q);
   }
 
-  async function minimize() {
+  const minimize = useCallback(async () => {
     const res = await fetch("/api/draft-sales", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ items: sale.items, payments: sale.payments, discountType: sale.discountType, discountValue: sale.discountValue, observation: sale.observation }) });
     const json = await res.json();
     if (!json.ok) return setMessage(json.message ?? "Erro ao minimizar venda.");
     sale.clear();
     await loadDrafts();
     setMessage("Venda minimizada.");
-  }
+  }, [sale]);
 
   function restoreDraft(draft: any) {
     sale.loadDraft({
@@ -94,7 +94,7 @@ export function SalesClient() {
     }
     window.addEventListener("keydown", hotkeys);
     return () => window.removeEventListener("keydown", hotkeys);
-  }, [sale]);
+  }, [minimize, sale]);
 
   return (
     <div>

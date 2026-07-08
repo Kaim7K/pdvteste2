@@ -11,8 +11,11 @@ export function ProductGrid({ products, onSelect }: { products: ProductLite[]; o
       {products.map((product) => (
         <button key={product.id} onClick={() => onSelect(product)} className="text-left">
           <Card className="h-full p-3 transition hover:border-pdv-green/70">
-            <div className="mb-3 flex h-24 items-center justify-center rounded-lg bg-black/20">
-              {product.imageUrl ? <img src={product.imageUrl} alt={product.name} className="max-h-20 max-w-full object-contain"/> : <Package className="text-pdv-muted" />}
+            <div className="relative mb-3 flex h-24 items-center justify-center rounded-lg bg-black/20">
+              {product.imageUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={product.imageUrl} alt={product.name} className="max-h-20 max-w-full object-contain"/>
+              ) : <Package className="text-pdv-muted" />}
             </div>
             <div className="line-clamp-2 min-h-10 text-sm font-semibold text-white">{product.name}</div>
             <div className="mt-1 text-xs text-pdv-muted">{product.internalCode}</div>

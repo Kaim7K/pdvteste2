@@ -3,6 +3,8 @@ import { PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { toMoney } from "@/lib/money";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const start = new Date(); start.setHours(0,0,0,0);
   const [sales, products, negative, credit] = await Promise.all([
