@@ -1,6 +1,6 @@
 # PDV Mercado Profissional Online
 
-Sistema PDV online para mercado com venda rápida, estoque, produtos com ou sem código de barras, pagamento misto, fiado, vendas minimizadas, recibo, auditoria e relatórios gerenciais.
+Sistema PDV online para mercado com venda rapida, estoque, produtos com ou sem codigo de barras, pagamento misto, fiado, vendas minimizadas, recibo, auditoria e relatorios gerenciais.
 
 ## Stack
 
@@ -17,47 +17,50 @@ Sistema PDV online para mercado com venda rápida, estoque, produtos com ou sem 
 - bcryptjs
 - JWT em cookie HTTP-only
 
-## Instalação
+## Deploy na Vercel
 
-```bash
-npm install
-cp .env.example .env
-```
+Este projeto foi preparado para rodar com banco PostgreSQL conectado pela Vercel, como Neon ou Prisma Postgres.
 
-Configure `DATABASE_URL` no `.env`.
-
-## Banco
-
-```bash
-npx prisma generate
-npx prisma migrate dev --name init
-npm run db:seed
-```
-
-Usuário inicial:
+No painel da Vercel, configure estas variaveis em Production:
 
 ```txt
-usuário: admin
+DATABASE_URL=postgresql://usuario:senha@host.neon.tech/banco?sslmode=require
+JWT_SECRET=uma-chave-grande-com-no-minimo-32-caracteres
+JWT_EXPIRES_IN=7d
+NEXT_PUBLIC_APP_NAME=Mercadinho Alameda das Arvores
+NEXT_PUBLIC_APP_VERSION=1.0.0
+```
+
+O deploy da Vercel usa `npm run vercel-build`, que executa:
+
+```bash
+prisma generate
+prisma db push
+prisma db seed
+next build
+```
+
+Assim, ao fazer redeploy com `DATABASE_URL` configurado, o schema do banco e os usuarios iniciais sao criados automaticamente.
+
+## Usuarios iniciais
+
+```txt
+usuario: admin
 senha: admin123
 ```
 
-Também é criado um vendedor:
-
 ```txt
-usuário: vendedor
+usuario: vendedor
 senha: vendedor123
 ```
 
-## Executar
+## Desenvolvimento opcional
+
+Para rodar localmente, crie um `.env` com uma URL PostgreSQL real de um provedor externo.
 
 ```bash
+npm install
 npm run dev
-```
-
-Acesse:
-
-```txt
-http://localhost:3000/login
 ```
 
 ## Rotas principais
@@ -75,7 +78,3 @@ http://localhost:3000/login
 /app/usuarios
 /app/configuracoes
 ```
-
-## Observação técnica
-
-Este pacote não inclui `node_modules`. Instale as dependências antes de executar. A validação feita no zip é estrutural: presença de módulos, schema, rotas, páginas, serviços, configurações e scripts. O build completo depende de instalar dependências e conectar um PostgreSQL real.

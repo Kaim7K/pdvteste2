@@ -9,3 +9,5 @@ coverage
 *.log
 tsconfig.tsbuildinfo
 prisma/dev.db
+
+.vercel
