@@ -1,0 +1,418 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum RoleName {
+  MANAGER
+  SELLER
+}
+
+enum UnitType {
+  UNIT
+  WEIGHT
+  PACKAGE
+}
+
+enum SaleStatus {
+  OPEN
+  COMPLETED
+  CANCELLED
+  DELETED
+}
+
+enum DraftSaleStatus {
+  ACTIVE
+  MINIMIZED
+  DISCARDED
+  CONVERTED_TO_SALE
+}
+
+enum PaymentMethod {
+  CASH
+  DEBIT
+  CREDIT
+  PIX
+  OTHER
+  CREDIT_SALE
+}
+
+enum DiscountType {
+  NONE
+  FIXED
+  PERCENTAGE
+}
+
+enum CreditStatus {
+  OPEN
+  PARTIAL
+  PAID
+  CANCELLED
+}
+
+enum StockMovementType {
+  SALE
+  MANUAL_ENTRY
+  MANUAL_EXIT
+  CORRECTION
+  CANCELLATION_REVERSAL
+  QUICK_REGISTER
+}
+
+enum AuditOrigin {
+  STOCK_SCREEN
+  SALES_SCREEN
+  WRONG_PRICE
+  QUICK_REGISTER
+  MANUAL_EDIT
+  SYSTEM
+  CREDIT_SCREEN
+  SETTINGS_SCREEN
+}
+
+model User {
+  id                String              @id @default(cuid())
+  name              String
+  username          String              @unique
+  passwordHash      String              @map("password_hash")
+  role              RoleName
+  isActive          Boolean             @default(true) @map("is_active")
+  createdAt         DateTime            @default(now()) @map("created_at")
+  updatedAt         DateTime            @updatedAt @map("updated_at")
+  deletedAt         DateTime?           @map("deleted_at")
+  permissions       UserPermission[]
+  products          Product[]           @relation("ProductCreatedBy")
+  productAudits     ProductAudit[]
+  stockMovements    StockMovement[]
+  sales             Sale[]
+  draftSales        DraftSale[]
+  creditCustomers   CreditCustomer[]
+  creditSales       CreditSale[]
+  creditPayments    CreditPayment[]
+  systemAudits      SystemAudit[]
+  saleCancellations SaleCancellation[]
+  settings          Setting[]
+
+  @@map("users")
+}
+
+model Permission {
+  id              String           @id @default(cuid())
+  key             String           @unique
+  description     String
+  createdAt       DateTime         @default(now()) @map("created_at")
+  userPermissions UserPermission[]
+
+  @@map("permissions")
+}
+
+model UserPermission {
+  id           String     @id @default(cuid())
+  userId       String     @map("user_id")
+  permissionId String     @map("permission_id")
+  allowed      Boolean    @default(true)
+  createdAt    DateTime   @default(now()) @map("created_at")
+  user         User       @relation(fields: [userId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String    @unique
+  description String?
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  deletedAt   DateTime? @map("deleted_at")
+  products    Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id             String          @id @default(cuid())
+  internalCode   String          @unique @map("internal_code")
+  barcode        String?         @unique
+  name           String
+  categoryId     String?         @map("category_id")
+  imageUrl       String?         @map("image_url")
+  salePrice      Decimal         @db.Decimal(12, 2) @map("sale_price")
+  costPrice      Decimal?        @db.Decimal(12, 2) @map("cost_price")
+  stockQuantity  Decimal         @default(0) @db.Decimal(14, 3) @map("stock_quantity")
+  unitType       UnitType        @default(UNIT) @map("unit_type")
+  isActive       Boolean         @default(true) @map("is_active")
+  createdBy      String?         @map("created_by")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+  deletedAt      DateTime?       @map("deleted_at")
+  category       Category?       @relation(fields: [categoryId], references: [id])
+  creator        User?           @relation("ProductCreatedBy", fields: [createdBy], references: [id])
+  images         ProductImage[]
+  audits         ProductAudit[]
+  stockMovements StockMovement[]
+  saleItems      SaleItem[]
+  draftSaleItems DraftSaleItem[]
+
+  @@index([name])
+  @@index([barcode])
+  @@index([internalCode])
+  @@map("products")
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  productId String   @map("product_id")
+  url       String
+  source    String?
+  selected  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  product   Product  @relation(fields: [productId], references: [id])
+
+  @@map("product_images")
+}
+
+model ProductAudit {
+  id           String      @id @default(cuid())
+  productId    String      @map("product_id")
+  userId       String      @map("user_id")
+  fieldChanged String      @map("field_changed")
+  oldValue     String?     @map("old_value")
+  newValue     String?     @map("new_value")
+  origin       AuditOrigin
+  saleId       String?     @map("sale_id")
+  observation  String?
+  createdAt    DateTime    @default(now()) @map("created_at")
+  product      Product     @relation(fields: [productId], references: [id])
+  user         User        @relation(fields: [userId], references: [id])
+  sale         Sale?       @relation(fields: [saleId], references: [id])
+
+  @@index([productId, createdAt])
+  @@map("product_audits")
+}
+
+model StockMovement {
+  id            String            @id @default(cuid())
+  productId     String            @map("product_id")
+  userId        String            @map("user_id")
+  movementType  StockMovementType @map("movement_type")
+  quantity      Decimal           @db.Decimal(14, 3)
+  previousStock Decimal           @db.Decimal(14, 3) @map("previous_stock")
+  newStock      Decimal           @db.Decimal(14, 3) @map("new_stock")
+  saleId        String?           @map("sale_id")
+  observation   String?
+  createdAt     DateTime          @default(now()) @map("created_at")
+  product       Product           @relation(fields: [productId], references: [id])
+  user          User              @relation(fields: [userId], references: [id])
+  sale          Sale?             @relation(fields: [saleId], references: [id])
+
+  @@map("stock_movements")
+}
+
+model Sale {
+  id                String             @id @default(cuid())
+  saleNumber        Int                @unique @default(autoincrement()) @map("sale_number")
+  userId            String             @map("user_id")
+  status            SaleStatus         @default(OPEN)
+  subtotal          Decimal            @db.Decimal(12, 2)
+  discountType      DiscountType       @default(NONE) @map("discount_type")
+  discountValue     Decimal            @default(0) @db.Decimal(12, 2) @map("discount_value")
+  total             Decimal            @db.Decimal(12, 2)
+  observation       String?
+  isCreditSale      Boolean            @default(false) @map("is_credit_sale")
+  creditCustomerId  String?            @map("credit_customer_id")
+  createdAt         DateTime           @default(now()) @map("created_at")
+  completedAt       DateTime?          @map("completed_at")
+  cancelledAt       DateTime?          @map("cancelled_at")
+  deletedAt         DateTime?          @map("deleted_at")
+  user              User               @relation(fields: [userId], references: [id])
+  creditCustomer    CreditCustomer?    @relation(fields: [creditCustomerId], references: [id])
+  items             SaleItem[]
+  payments          SalePayment[]
+  productAudits     ProductAudit[]
+  stockMovements    StockMovement[]
+  creditSale        CreditSale?
+  cancellations     SaleCancellation[]
+  systemAudits      SystemAudit[]
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@map("sales")
+}
+
+model SaleItem {
+  id                  String   @id @default(cuid())
+  saleId              String   @map("sale_id")
+  productId           String   @map("product_id")
+  productNameSnapshot String   @map("product_name_snapshot")
+  quantity            Decimal  @db.Decimal(14, 3)
+  weight              Decimal? @db.Decimal(14, 3)
+  unitPrice           Decimal  @db.Decimal(12, 2) @map("unit_price")
+  subtotal            Decimal  @db.Decimal(12, 2)
+  createdAt           DateTime @default(now()) @map("created_at")
+  sale                Sale     @relation(fields: [saleId], references: [id])
+  product             Product  @relation(fields: [productId], references: [id])
+
+  @@map("sale_items")
+}
+
+model SalePayment {
+  id           String        @id @default(cuid())
+  saleId       String        @map("sale_id")
+  paymentMethod PaymentMethod @map("payment_method")
+  amount       Decimal       @db.Decimal(12, 2)
+  changeAmount Decimal       @default(0) @db.Decimal(12, 2) @map("change_amount")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  sale         Sale          @relation(fields: [saleId], references: [id])
+
+  @@map("sale_payments")
+}
+
+model DraftSale {
+  id            String           @id @default(cuid())
+  draftNumber   Int              @unique @default(autoincrement()) @map("draft_number")
+  userId        String           @map("user_id")
+  status        DraftSaleStatus  @default(ACTIVE)
+  subtotal      Decimal          @default(0) @db.Decimal(12, 2)
+  discountType  DiscountType     @default(NONE) @map("discount_type")
+  discountValue Decimal          @default(0) @db.Decimal(12, 2) @map("discount_value")
+  total         Decimal          @default(0) @db.Decimal(12, 2)
+  observation   String?
+  createdAt     DateTime         @default(now()) @map("created_at")
+  updatedAt     DateTime         @updatedAt @map("updated_at")
+  user          User             @relation(fields: [userId], references: [id])
+  items         DraftSaleItem[]
+  payments      DraftSalePayment[]
+
+  @@map("draft_sales")
+}
+
+model DraftSaleItem {
+  id          String    @id @default(cuid())
+  draftSaleId String    @map("draft_sale_id")
+  productId   String    @map("product_id")
+  quantity    Decimal   @db.Decimal(14, 3)
+  weight      Decimal?  @db.Decimal(14, 3)
+  unitPrice   Decimal   @db.Decimal(12, 2) @map("unit_price")
+  subtotal    Decimal   @db.Decimal(12, 2)
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+  draftSale   DraftSale @relation(fields: [draftSaleId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id])
+
+  @@map("draft_sale_items")
+}
+
+model DraftSalePayment {
+  id            String        @id @default(cuid())
+  draftSaleId   String        @map("draft_sale_id")
+  paymentMethod PaymentMethod @map("payment_method")
+  amount        Decimal       @db.Decimal(12, 2)
+  createdAt     DateTime      @default(now()) @map("created_at")
+  draftSale     DraftSale     @relation(fields: [draftSaleId], references: [id])
+
+  @@map("draft_sale_payments")
+}
+
+model CreditCustomer {
+  id          String       @id @default(cuid())
+  name        String
+  phone       String?
+  observation String?
+  createdBy   String       @map("created_by")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
+  deletedAt   DateTime?    @map("deleted_at")
+  creator     User         @relation(fields: [createdBy], references: [id])
+  sales       Sale[]
+  creditSales CreditSale[]
+
+  @@index([name])
+  @@map("credit_customers")
+}
+
+model CreditSale {
+  id               String          @id @default(cuid())
+  saleId           String          @unique @map("sale_id")
+  creditCustomerId String          @map("credit_customer_id")
+  userId           String          @map("user_id")
+  originalAmount   Decimal         @db.Decimal(12, 2) @map("original_amount")
+  paidAmount       Decimal         @default(0) @db.Decimal(12, 2) @map("paid_amount")
+  pendingAmount    Decimal         @db.Decimal(12, 2) @map("pending_amount")
+  status           CreditStatus    @default(OPEN)
+  createdAt        DateTime        @default(now()) @map("created_at")
+  paidAt           DateTime?       @map("paid_at")
+  cancelledAt      DateTime?       @map("cancelled_at")
+  sale             Sale            @relation(fields: [saleId], references: [id])
+  creditCustomer   CreditCustomer  @relation(fields: [creditCustomerId], references: [id])
+  user             User            @relation(fields: [userId], references: [id])
+  payments         CreditPayment[]
+
+  @@map("credit_sales")
+}
+
+model CreditPayment {
+  id            String        @id @default(cuid())
+  creditSaleId  String        @map("credit_sale_id")
+  userId        String        @map("user_id")
+  amount        Decimal       @db.Decimal(12, 2)
+  paymentMethod PaymentMethod @map("payment_method")
+  observation   String?
+  createdAt     DateTime      @default(now()) @map("created_at")
+  creditSale    CreditSale    @relation(fields: [creditSaleId], references: [id])
+  user          User          @relation(fields: [userId], references: [id])
+
+  @@map("credit_payments")
+}
+
+model SaleCancellation {
+  id               String   @id @default(cuid())
+  saleId           String   @map("sale_id")
+  userId           String   @map("user_id")
+  reason           String?
+  saleTotal        Decimal  @db.Decimal(12, 2) @map("sale_total")
+  productsSnapshot Json     @map("products_snapshot")
+  createdAt        DateTime @default(now()) @map("created_at")
+  sale             Sale     @relation(fields: [saleId], references: [id])
+  user             User     @relation(fields: [userId], references: [id])
+
+  @@map("sale_cancellations")
+}
+
+model SystemAudit {
+  id         String      @id @default(cuid())
+  userId     String?     @map("user_id")
+  entityType String      @map("entity_type")
+  entityId   String      @map("entity_id")
+  action     String
+  oldData    Json?       @map("old_data")
+  newData    Json?       @map("new_data")
+  origin     AuditOrigin
+  saleId     String?     @map("sale_id")
+  ipAddress  String?     @map("ip_address")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  user       User?       @relation(fields: [userId], references: [id])
+  sale       Sale?       @relation(fields: [saleId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@map("system_audits")
+}
+
+model Setting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedBy   String?  @map("updated_by")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User?    @relation(fields: [updatedBy], references: [id])
+
+  @@map("settings")
+}

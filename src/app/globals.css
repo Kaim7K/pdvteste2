@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  min-height: 100%;
+  background: #07100B;
+  color: #F5F7F2;
+}
+
+body {
+  margin: 0;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #101815;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #33443a;
+  border-radius: 999px;
+}
+
+input, select, textarea {
+  color-scheme: dark;
+}
+
+.receipt-print {
+  background: white;
+  color: black;
+}
+
+@media print {
+  body * { visibility: hidden; }
+  .receipt-print, .receipt-print * { visibility: visible; }
+  .receipt-print { position: absolute; left: 0; top: 0; width: 100%; }
+  .no-print { display: none !important; }
+}
