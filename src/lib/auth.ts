@@ -1,5 +1,5 @@
 import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
+import jwt, { type Secret, type SignOptions } from "jsonwebtoken";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { RoleName } from "@prisma/client";
@@ -21,7 +21,7 @@ export type AuthUser = {
   role: RoleName;
 };
 
-function getJwtSecret() {
+function getJwtSecret(): Secret {
   const secret = process.env.JWT_SECRET;
   if (!secret || secret.length < 24) {
     throw new Error("JWT_SECRET ausente ou fraco. Configure o .env.");
@@ -38,9 +38,17 @@ export async function hashPassword(password: string) {
 }
 
 export function signToken(user: AuthUser) {
-  return jwt.sign({ sub: user.id, username: user.username, role: user.role } satisfies TokenPayload, getJwtSecret(), {
-    expiresIn: process.env.JWT_EXPIRES_IN ?? "7d"
-  });
+  const payload: TokenPayload = {
+    sub: user.id,
+    username: user.username,
+    role: user.role
+  };
+
+  const options: SignOptions = {
+    expiresIn: (process.env.JWT_EXPIRES_IN ?? "7d") as SignOptions["expiresIn"]
+  };
+
+  return jwt.sign(payload, getJwtSecret(), options);
 }
 
 export function setAuthCookie(token: string) {
