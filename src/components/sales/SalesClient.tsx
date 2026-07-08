@@ -1,8 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Search } from "lucide-react";
-import { PageHeader } from "@/components/layout/PageHeader";
+import { Filter, Plus, Search, SlidersHorizontal } from "lucide-react";
 import { ProductGrid } from "@/components/sales/ProductGrid";
 import { SaleCart } from "@/components/sales/SaleCart";
 import { PaymentModal } from "@/components/sales/PaymentModal";
@@ -14,6 +13,8 @@ import { Card } from "@/components/ui/Card";
 import { useBarcodeCapture } from "@/hooks/useBarcodeCapture";
 import { ProductLite, selectTotals, useSaleStore } from "@/store/sale-store";
 import { toMoney } from "@/lib/money";
+
+const categories = ["Todos", "Alimentos", "Bebidas", "Higiene", "Limpeza", "Frios", "Outros"];
 
 export function SalesClient() {
   const sale = useSaleStore();
@@ -43,7 +44,7 @@ export function SalesClient() {
 
   const addProduct = useCallback((product: ProductLite) => {
     const result = sale.addProduct(product);
-    setMessage(result.stockWarning ? "Por favor, revisar estoque desse produto." : `${product.name} adicionado à venda.`);
+    setMessage(result.stockWarning ? "Por favor, revisar estoque desse produto." : `${product.name} adicionado a venda.`);
     setTimeout(() => setMessage(""), 2400);
   }, [sale]);
 
@@ -97,19 +98,47 @@ export function SalesClient() {
   }, [minimize, sale]);
 
   return (
-    <div>
-      <PageHeader title="Vendas" description="Tela principal do caixa. Venda por leitor, teclado, código interno ou pesquisa manual." right={<div className="text-right"><div className="text-xs text-pdv-muted">Total atual</div><div className="text-2xl font-black text-pdv-green">{toMoney(totals.total)}</div></div>} />
-      {message ? <div className="mb-4 rounded-xl border border-pdv-green/30 bg-pdv-green/10 p-3 text-sm text-pdv-green">{message}</div> : null}
-      <div className="grid grid-cols-[1fr_430px] gap-5">
-        <div>
-          <form onSubmit={search} className="mb-4 flex gap-2">
-            <div className="relative flex-1"><Search className="absolute left-3 top-3 text-pdv-muted" size={18}/><input id="product-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Busque por nome, categoria, código de barras ou código interno..." className="h-11 w-full rounded-lg border border-pdv-border bg-black/20 pl-10 pr-3 outline-none focus:border-pdv-green" /></div>
-            <Button>Filtrar F2</Button>
+    <div className="space-y-5">
+      {message ? <div className="rounded-xl border border-pdv-green/30 bg-pdv-green/10 p-3 text-sm font-bold text-pdv-green">{message}</div> : null}
+      <div className="grid grid-cols-[minmax(0,1fr)_440px] gap-5">
+        <div className="min-w-0 space-y-4">
+          <form onSubmit={search} className="flex gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-4 top-3.5 text-pdv-muted" size={22}/>
+              <input id="product-search" value={q} onChange={e => setQ(e.target.value)} placeholder="Busque por nome, categoria, codigo de barras ou codigo interno..." className="h-13 w-full rounded-xl border border-pdv-green/35 bg-black/35 pl-12 pr-14 text-sm outline-none focus:border-pdv-green focus:ring-2 focus:ring-pdv-green/20" />
+              <kbd className="absolute right-3 top-3 rounded bg-white/10 px-2 py-1 text-xs text-pdv-muted">F2</kbd>
+            </div>
+            <Button type="submit" variant="secondary"><Filter size={18}/> Filtrar</Button>
           </form>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {categories.map((category, index) => (
+              <button key={category} className={index === 0 ? "h-10 rounded-lg bg-pdv-green px-4 text-sm font-black text-[#0a1306]" : "h-10 rounded-lg border border-pdv-border bg-white/[.035] px-4 text-sm text-pdv-muted hover:border-pdv-green/50 hover:text-white"}>
+                {category}
+              </button>
+            ))}
+            <Button variant="secondary" className="ml-auto"><SlidersHorizontal size={17}/> Ordenar</Button>
+          </div>
+
           <ProductGrid products={products} onSelect={addProduct}/>
-          <Card className="mt-4 p-3">
-            <div className="mb-2 text-sm font-bold text-white">Vendas minimizadas</div>
-            <div className="flex flex-wrap gap-2">{drafts.map(d => <button key={d.id} onClick={() => restoreDraft(d)} className="rounded-lg border border-pdv-green/30 bg-pdv-green/10 px-4 py-2 text-sm font-bold text-pdv-green">Venda {d.draftNumber}<br/><span className="text-xs text-pdv-muted">{toMoney(Number(d.total))}</span></button>)}</div>
+
+          <Card className="p-4">
+            <div className="mb-3 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-black uppercase text-pdv-muted">Vendas abertas</div>
+                <div className="text-xs text-pdv-muted">Recupere uma venda minimizada sem perder itens</div>
+              </div>
+              <Button variant="secondary" disabled><Plus size={18}/> Nova venda <span className="text-xs">F6</span></Button>
+            </div>
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {drafts.map((d, index) => (
+                <button key={d.id} onClick={() => restoreDraft(d)} className="rounded-xl border border-pdv-green/30 bg-gradient-to-br from-pdv-green/20 to-black/20 p-3 text-left hover:border-pdv-green">
+                  <div className="flex items-center justify-between text-xs text-pdv-muted"><span>Venda {d.draftNumber}</span><b className="rounded-full bg-pdv-green px-2 text-black">{index + 1}</b></div>
+                  <div className="mt-2 text-lg font-black text-pdv-green">{toMoney(Number(d.total))}</div>
+                </button>
+              ))}
+              {!drafts.length ? <div className="col-span-full rounded-xl border border-dashed border-pdv-border p-4 text-center text-sm text-pdv-muted">Nenhuma venda minimizada.</div> : null}
+            </div>
           </Card>
         </div>
         <SaleCart onOpenPayment={() => setPaymentOpen(true)} onWrongPrice={() => setWrongPriceOpen(true)} onMinimize={minimize}/>
