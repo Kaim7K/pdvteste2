@@ -29,6 +29,10 @@ function getJwtSecret(): Secret {
   return secret;
 }
 
+function getJwtExpiresIn(): SignOptions["expiresIn"] {
+  return (process.env.JWT_EXPIRES_IN ?? "7d") as SignOptions["expiresIn"];
+}
+
 export async function verifyPassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
@@ -45,7 +49,7 @@ export function signToken(user: AuthUser) {
   };
 
   const options: SignOptions = {
-    expiresIn: (process.env.JWT_EXPIRES_IN ?? "7d") as SignOptions["expiresIn"]
+    expiresIn: getJwtExpiresIn()
   };
 
   return jwt.sign(payload, getJwtSecret(), options);
